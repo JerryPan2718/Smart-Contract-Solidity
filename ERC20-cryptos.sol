@@ -109,6 +109,8 @@ contract CryptosICO is CryptosToken{
         _;
     }
 
+    event Invest(address investor, uint value, uint tokens)
+
     constructor(address _deposit) public{
         deposit = _deposit;
         admin = msg.sender;
@@ -136,6 +138,50 @@ contract CryptosICO is CryptosToken{
             return State.afterEnd;
         }
     }
+
+    function invest() payable public returns(bool){
+        // invest only in running
+        icoState = getCurrentState();
+        require(icoState == State.running);
+        require(msg.value >= minInvestment && msg.value <= maxInvestment);
+
+        uint tokens = msg.value / tokenPrice;
+
+        // hardCap not reached
+        require(raisedAmount + msg.value <= hardCap);
+
+        raisedAmount += msg.value;
+        balances[msg.sender] += tokens;
+        balances[founder] -= tokens;
+
+        deposit.transfer(msg.value);
+
+        emit Invest(msg.sender, msg.value, tokens);
+
+        return true;
+    }
+
+    function burn() public returns(bool){
+        icoState = getCurrentState();
+        require(icoState == State.afterEnd);
+        balances[founder] = 0;
+    }
+
+    function () payable public{
+        invest();
+    } 
+
+    function transfer(address to, uint value) public returns(bool){
+        require(block.timestamp > coinTradeStart);
+        super.transfer(to, value);
+    }
+
+    function transferFrom(address _from, address _to, uint _value) public returns(bool){
+        require(block.timestamp > coinTradeStart);
+        super.transfer(from, value);
+    }
+
+
 
 
 
